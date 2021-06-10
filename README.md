@@ -2,7 +2,7 @@
 This is a simple command line app using Google Books API. You can search and add books to a reading list. The reading list is stored locally and will not be lossed when the app closes.
 
 ## Installation
-Open up a terminal and navigate to the project folder myBooks. This application uses the axios library so you'll have to run:
+Download or clone the git repo. Open up a terminal and navigate to the project folder myBooks. This application uses the axios library so you'll have to run:
 ```
 npm install
 ```

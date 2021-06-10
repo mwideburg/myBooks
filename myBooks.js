@@ -21,6 +21,7 @@ const getInput = (context) => {
             mainMenu()
             currentPage = "main"
         }
+        
     })
     return;
 }
@@ -35,6 +36,14 @@ const mainMenu = () => {
 
 const selectMenu = (data) => {
     if(currentPage != "main") return;
+    if (data === '*home') return;
+    if (data === 'reset') {
+        console.log("resetting reading list...")
+        reset()
+        console.log("------------------------------")
+        mainMenu()
+        return;
+    }
     switch (+data) {
         case 1:
             searchForBooks()
@@ -48,6 +57,7 @@ const selectMenu = (data) => {
         case 3:
             console.log("Thanks, have a wonderful day")
             process.exit()
+        
         default:
             console.log("Please enter a valid option (1, 2 or 3)")
             break;
@@ -156,12 +166,19 @@ const showReadingList = () => {
     })
 
     // console.log(myList)
-    
-    mainMenu()
+    setTimeout(() => {
+        mainMenu()
+
+    }, 500)
 
     
     
 }
+
+const reset = () => {
+    fs.writeFileSync('readingList.json', JSON.stringify([]))
+}
+
 const start = () => {
     
     for (i = 0; i < 3; i++) {

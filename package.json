@@ -1,0 +1,18 @@
+{
+  "name": "books_api",
+  "version": "1.0.0",
+  "description": "Google Books API basic CLI App",
+  "main": "myBooks.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Google",
+    "Books"
+  ],
+  "author": "Michael Wideburg",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.21.1"
+  }
+}

@@ -209,19 +209,28 @@ const listingsMenu = (data) => {
         // push the knew content into that array from the current_search
         fs.readFile("readingList.json", (err, data) => {
             if (err) {
-                throw err;
+                console.log(red, "There seems to be a pretty bad error with your reading list, were sorry about that...")
+                console.log(red, "To try and fix please enter")
+                console.log(yellow, "reset")
+                console.log(red, "at the main menu, you will lose your current reading list.")
+                mainMenu()
+                current_page = "main"
+                return;
+                // throw err;
+            }else{
+                const content = JSON.parse(data);
+                content.push(current_search[id])
+                fs.writeFileSync('readingList.json', JSON.stringify(content))
+                setTimeout(() => {
+                    mainMenu()
+                    current_page = "main"
+                }, 1000)
             }
-            const content = JSON.parse(data);
-            content.push(current_search[id])
-            fs.writeFileSync('readingList.json', JSON.stringify(content))
             
         });
 
         // Delay a little before the menu pops back up
-        setTimeout(() => {
-            mainMenu()
-            current_page = "main"
-        }, 1000)
+        
         
     }else{
         // error message
@@ -231,31 +240,45 @@ const listingsMenu = (data) => {
 
 // Prints out the reading list
 const showReadingList = () => {
-    console.log("READING LIST")
-    console.log(line_lg)
+    
 
     // Reads the file and prints out each item in the json object
     fs.readFile("readingList.json", (err, data) => {
         if (err) {
-            throw err;
-        }
-        const content = JSON.parse(data);
-        for(i = 0; i < content.length; i++){
-            const book = content[0]
-            // We don't want the numbering to start at index 0, so we add 1 to start at 1
-            console.log(i + 1)
-            Object.keys(content[i]).forEach(key => console.log(yellow, `${key}: ${content[i][key]}`))
-            console.log(line_sm)
-        }
+            console.log(red, "There seems to be a pretty bad error with your reading list, were sorry about that...")
+            console.log(red, "To try and fix please enter")
+            console.log(yellow, "reset")
+            console.log(red, "at the main menu, you will lose your current reading list.")
+            mainMenu()
+            return;
+            // throw err;
+        }else{
+            if(data.length === 0){
+                reset()
+                showReadingList()
+                return;
+            }
+            
+            const content = JSON.parse(data);
+            console.log("READING LIST")
+            console.log(line_lg)
+            for(i = 0; i < content.length; i++){
+                const book = content[0]
+                // We don't want the numbering to start at index 0, so we add 1 to start at 1
+                console.log(i + 1)
+                PRINT_KEYS.forEach(key => console.log(yellow, `${key}: ${content[i][key]}`))
+                console.log(line_sm)
+            }
+            setTimeout(() => {
+                mainMenu()
 
-        
+            }, 500)
+
+        }
     })
 
     // print out main menu after slight delay
-    setTimeout(() => {
-        mainMenu()
-
-    }, 500)
+    
 
     
 }

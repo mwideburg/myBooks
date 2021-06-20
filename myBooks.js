@@ -124,9 +124,6 @@ const searchForBooks = () => {
 
 
 const listQueryResults = (books, query) => {
-    current_page = "query_results"
-    getUserInput()
-
     if(books === undefined){
         console.log(red,`Sorry there are no results for...`)
         console.log(yellow, query)
@@ -136,9 +133,11 @@ const listQueryResults = (books, query) => {
         return;
     }
 
+    
+    
     const results = {}
 
-    console.log("RESULTS")
+    console.log(`RESULTS for "${query}"`)
     
     let current_size = 0
     let i = 0;
@@ -166,6 +165,8 @@ const listQueryResults = (books, query) => {
 
     current_search = results
     LIST_OPTIONS.forEach(line => console.log(line))
+    current_page = "query_results"
+    getUserInput()
     
 }
 
@@ -203,9 +204,8 @@ const selectBookFromQuery = (data) => {
     }
 }
 
-// Prints out the reading list
 const showReadingList = () => {
-    // Reads the file and prints out each item in the json object
+
     fs.readFile("readingList.json", (err, data) => {
         if (err) {
             console.log(red, "There seems to be a pretty bad error with your reading list, were sorry about that...")

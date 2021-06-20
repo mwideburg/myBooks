@@ -14,5 +14,5 @@ node myBooks.js
 ## Resetting Reading List
 The reading list uses fs.writeFileSync to add book information to the readingList.json file. If you'd like to reset your reading list, start the app and from the main menu run:
 ```
-reset
+*reset
 ```

@@ -1,6 +1,7 @@
 // require the util for get requests and fs for file reading and writing
 const {searchBooks} = require('./util')
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const readline = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout
@@ -20,7 +21,7 @@ const LIST_OPTIONS = [
     "If you would like to save a book to your list", 
     "please enter the corresponding number of which book you would like to save.",
     line_sm,
-    "To search again please type in 'search'",
+    "To search again please type in '*search'",
     "To go back to the main menu please type in *home"
 ]
 
@@ -39,43 +40,38 @@ let current_page = "main"
 let current_search = {};
 
 
-function getUserInput(){
-    readline.question('', entry => {
-        checkInput(entry)
-    });
-}
-
-
 const mainMenu = () => {
     MENU_OPTIONS.forEach(option => console.log(option))
-    getUserInput()
-   
+    current_page = "main"
 }
-const checkInput = (entry) => {
+
+const isDefaultInput = (entry) => {
     if (entry === '*home'){
-        mainMenu() 
-        current_page = "main"
-        return;
+        mainMenu()
+        return true;
     }
     if(entry === "*search") {
         searchForBooks()
-        current_page = "search"
-        return;
+        return true;
     }
     if (entry === '*reset') {
         console.log("resetting reading list...")
         resetReadingList()
         console.log(line_sm)
         mainMenu()
-        return;
+        return true;
     }
+    return false;
+}
 
+const passUserInput = async (entry) => {
     switch (current_page) {
         case "main":
             selectMenu(entry)
             break;
         case "search":
-            queryBooks(entry)
+            const books = await queryBooks(entry)
+            listQueryResults(books, entry)
             break;
         case "query_results":
             selectBookFromQuery(entry)
@@ -83,17 +79,13 @@ const checkInput = (entry) => {
         default:
             break;
     }
-    return;
+
 }
 
 const selectMenu = (data) => {
     switch (+data) {
-        case 1:
-            setTimeout(() => {
-                searchForBooks()
-                current_page = "search"
-            }, 200)
-           
+        case 1: 
+            searchForBooks()
             break;
         case 2:
             showReadingList()
@@ -109,134 +101,150 @@ const selectMenu = (data) => {
     return;
 }
 
-
-const queryBooks = (data) => {
+const queryBooks = async (data) => {
     const query = data.split(' ').join('+')
-    searchBooks(query).then(books => {
-        listQueryResults(books, query)
+    const books = await searchBooks(query).then(books => {
+        if (checkValidResults(books, query)){
+            topFive = books.slice(0, 5)
+            return topFive
+        }
     })
+    return books
 }
 
 const searchForBooks = () => {   
-    console.log("Search for a book or books, to exit back to home, enter *home")
-    getUserInput() 
+    console.log("Search for a book or books, to exit back to home, enter *home") 
+    current_page = "search"
 }
 
-
-const listQueryResults = (books, query) => {
-    if(books === undefined){
-        console.log(red,`Sorry there are no results for...`)
+const checkValidResults = (books, query) => {
+    if (books === undefined) {
+        console.log(red, `Sorry there are no results for...`)
         console.log(yellow, query)
         console.log(red, "Please try searching for something else")
         console.log(line_sm)
         searchForBooks()
-        return;
+        return false;
     }
+    return true;
+}
+const parseBookData = (book) => {
+    const data = {
+        title: book.title,
+        authors: (book.authors === undefined) ? "Unknown" : book.authors,
+        publisher: (book.publisher === undefined) ? "Unknown" : book.publisher
+    }
+    return data
+}
+const printBookData = (book, index, color) => {
+    console.log(index)
+    PRINT_KEYS.forEach(key => {
+        console.log(color, `${key}, ${book[key]}`)
+    })
+    console.log(line_sm)
+}
 
-    
-    
-    const results = {}
-
+const listQueryResults = (books, query) => {
+    current_page = "query_results"
     console.log(`RESULTS for "${query}"`)
-    
-    let current_size = 0
-    let i = 0;
 
-    while( i < books.length && current_size < 5){
-        
-        const book = books[i].volumeInfo
-        if(book.title != undefined && book != undefined){
-            
-            results[current_size + 1] = {
-                title: book.title,
-                authors: (book.authors === undefined) ? "Unknown" : book.authors,
-                publisher: (book.publisher === undefined) ? "Unknown" : book.publisher
-            }
+    const results = {}
+    let index = 1
+    books.forEach(data => {
+        const book = data.volumeInfo
+        if (book.title != undefined && book != undefined) {
+            results[index] = parseBookData(book)
 
-            console.log(current_size + 1)
-            PRINT_KEYS.forEach(key => {
-                console.log(cyan, `${key}, ${results[current_size + 1][key]}`)
-            })
-            console.log(line_sm)
-            current_size += 1
+            printBookData(results[index], index, cyan)
+            index += 1
         }
-        i += 1
-    }
+    })
 
     current_search = results
     LIST_OPTIONS.forEach(line => console.log(line))
-    current_page = "query_results"
-    getUserInput()
     
 }
 
+const printThreeLgLines = () => {
+    for (i = 0; i < 3; i++) { console.log(line_lg)}
+}
 
 const selectBookFromQuery = (data) => {
     
     const id = +data
     if(current_search[id] != undefined){
-        for (i = 0; i < 3; i++) { console.log(line_lg)}
+        printThreeLgLines()
         console.log(yellow, `${current_search[id].title} added to your reading list`)
-
-        for (i = 0; i < 3; i++) { console.log(line_lg) }
-        
-        fs.readFile("readingList.json", (err, data) => {
-            if (err) {
-                console.log(red, "There seems to be a pretty bad error with your reading list, were sorry about that...")
-                console.log(red, "To try and fix please enter")
-                console.log(yellow, "*reset")
-                console.log(red, "at the main menu, you will lose your current reading list.")
-            }else{
-                const content = JSON.parse(data);
-                content.push(current_search[id])
-                fs.writeFileSync('readingList.json', JSON.stringify(content))
-            }
-            setTimeout(() => {
-                mainMenu()
-                current_page = "main"
-            }, 1000)
-            
-        });
+        printThreeLgLines()
+        addToReadingList(current_search[id])
     }else{
-        // error message
         console.log(`I'm sorry "${data}" doesn't seem to be in your current search, please try again`)
-        getUserInput()
     }
 }
 
-const showReadingList = () => {
-
+const addToReadingList = (book) => {
     fs.readFile("readingList.json", (err, data) => {
         if (err) {
-            console.log(red, "There seems to be a pretty bad error with your reading list, were sorry about that...")
-            console.log(red, "To try and fix please enter")
-            console.log(yellow, "*reset")
-            console.log(red, "at the main menu, you will lose your current reading list.")
-            mainMenu()
-            return;
-            // throw err;
-        }else{
-            if(data.length === 0){
-                resetReadingList()
-                showReadingList()
-                return;
-            }
-            
+            readingListError()
+        } else {
             const content = JSON.parse(data);
-            console.log("READING LIST")
-            console.log(line_lg)
-            for(i = 0; i < content.length; i++){
-                const book = content[0]
-                // We don't want the numbering to start at index 0, so we add 1 to start at 1
-                console.log(i + 1)
-                PRINT_KEYS.forEach(key => console.log(yellow, `${key}: ${content[i][key]}`))
-                console.log(line_sm)
-            }
+            content.push(book)
+            fs.writeFileSync('readingList.json', JSON.stringify(content))
             setTimeout(() => {
                 mainMenu()
-            }, 500)
+            }, 1000)
         }
-    }) 
+    });
+}
+
+const readingListError = () => {
+    console.log(red, "There seems to be a pretty bad error with your reading list, were sorry about that...")
+    console.log(red, "To try and fix please enter")
+    console.log(yellow, "*reset")
+    console.log(red, "at the main menu, you will lose your current reading list.")
+    mainMenu()
+    return;
+}
+
+const getReadingList = async () => {
+    try{
+        const content = await fsPromises.readFile("readingList.json", (err, data) => {
+            if (err) {
+                readingListError()
+                return;
+            } else {
+                if (data.length === 0) {
+                    resetReadingList()
+                    showReadingList()
+                    return;
+                }
+                return data
+            }
+        })
+        return JSON.parse(content)
+    } catch(e) {
+        return "There has been an error"
+    }
+  
+    
+}
+
+const showReadingList = async () => {
+    const content = await getReadingList()
+        .then(content => content)
+        .catch((err) => {console.log(err)})
+    
+    console.log("READING LIST")
+    console.log(line_lg)
+    let index = 1
+    content.forEach(book => {
+        printBookData(book, i, yellow)
+        index += 1
+    })
+
+    setTimeout(() => {
+        mainMenu()
+    }, 500)
 }
 
 const resetReadingList = () => {
@@ -244,17 +252,23 @@ const resetReadingList = () => {
 }
 
 
-const start = () => {
-    for (i = 0; i < 3; i++) {
-        console.log(line_lg)
-    }
+
+const start = async () => {
+    printThreeLgLines()
     console.log(cyan, "Welcome to myBooks, a simple app using Google books api!")
-    for (i = 0; i < 3; i++) {
-        console.log(line_lg)
-    } 
+    printThreeLgLines()
+
     mainMenu()
+
+    for await (const line of readline) {
+        if (!isDefaultInput(line)){
+            passUserInput(line)
+        }
+    }
     
 }
 
 // Start the app
 start()
+
+module.exports = { start, queryBooks, listQueryResults, selectBookFromQuery, showReadingList, isDefaultInput }

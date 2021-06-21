@@ -4,7 +4,7 @@
   "description": "Google Books API basic CLI App",
   "main": "myBooks.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "keywords": [
     "Google",
@@ -14,6 +14,8 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.21.1",
+    "expect.js": "^0.3.1",
+    "mocha": "^9.0.1",
     "readline": "^1.3.0"
   }
 }

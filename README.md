@@ -16,3 +16,8 @@ The reading list uses fs.writeFileSync to add book information to the readingLis
 ```
 *reset
 ```
+
+## Running Tests
+```
+npm test
+```

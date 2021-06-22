@@ -31,7 +31,7 @@ const PRINT_KEYS = ["title", "authors", "publisher"]
 const yellow = '\x1b[33m%s\x1b[0m'
 const cyan = '\x1b[36m%s\x1b[0m'
 const red = '\x1b[31m%s\x1b[0m'
-
+const white = '\x1b[37m%s\x1b[0m'
 
 // Set current page to main for initial opening of app:
 let current_page = "main"
@@ -74,7 +74,11 @@ const passUserInput = async (entry) => {
             listQueryResults(books, entry)
             break;
         case "query_results":
-            selectBookFromQuery(entry)
+            try{
+                selectBookFromQuery(entry)
+            }catch(err){
+                console.log(err)
+            }
             break;
         default:
             break;
@@ -95,7 +99,7 @@ const selectMenu = (data) => {
             readline.close();
             break;
         default:
-            console.log("Please enter a valid option (1, 2 or 3)")
+            console.log("Please enter a valid option (1, 2, 3, *search)")
             break;
     }
     return;
@@ -105,7 +109,15 @@ const queryBooks = async (data) => {
     const query = data.split(' ').join('+')
     const books = await searchBooks(query).then(books => {
         if (checkValidResults(books, query)){
-            topFive = books.slice(0, 5)
+            const topFive = []
+            books.forEach(book => {
+                if(topFive.length === 5){
+                    return;
+                }
+                if (book.volumeInfo.title != undefined) {
+                    topFive.push(book)
+                }
+            })
             return topFive
         }
     })
@@ -129,6 +141,9 @@ const checkValidResults = (books, query) => {
     return true;
 }
 const parseBookData = (book) => {
+    if (book.title === undefined || book === undefined) {
+        return false;
+    }
     const data = {
         title: book.title,
         authors: (book.authors === undefined) ? "Unknown" : book.authors,
@@ -136,30 +151,38 @@ const parseBookData = (book) => {
     }
     return data
 }
-const printBookData = (book, index, color) => {
-    console.log(index)
+const printBookData = (book, index, color, color2) => {
+    console.log(color2, index)
     PRINT_KEYS.forEach(key => {
-        console.log(color, `${key}, ${book[key]}`)
+        console.log(color, `${key}: ${book[key]}`)
     })
     console.log(line_sm)
 }
 
+const printBooks = (books, color1, color2) => {
+    let index = 1
+    const results = {}
+    books.forEach(data => {
+        let book_obj = false;
+        if (data.volumeInfo){
+            const book = data.volumeInfo
+            book_obj = parseBookData(book)
+        }else{
+            book_obj = data
+        }
+        if (book_obj) {
+            results[index] = book_obj
+            printBookData(results[index], index, color1, color2)
+            index += 1
+        }
+    })
+    return results
+}
 const listQueryResults = (books, query) => {
     current_page = "query_results"
     console.log(`RESULTS for "${query}"`)
 
-    const results = {}
-    let index = 1
-    books.forEach(data => {
-        const book = data.volumeInfo
-        if (book.title != undefined && book != undefined) {
-            results[index] = parseBookData(book)
-
-            printBookData(results[index], index, cyan)
-            index += 1
-        }
-    })
-
+    const results = printBooks(books, cyan, yellow)
     current_search = results
     LIST_OPTIONS.forEach(line => console.log(line))
     
@@ -170,7 +193,6 @@ const printThreeLgLines = () => {
 }
 
 const selectBookFromQuery = (data) => {
-    
     const id = +data
     if(current_search[id] != undefined){
         printThreeLgLines()
@@ -178,23 +200,18 @@ const selectBookFromQuery = (data) => {
         printThreeLgLines()
         addToReadingList(current_search[id])
     }else{
-        console.log(`I'm sorry "${data}" doesn't seem to be in your current search, please try again`)
+        throw (new Error(`I'm sorry "${data}" doesn't seem to be in your current search, please try again`))
     }
 }
 
-const addToReadingList = (book) => {
-    fs.readFile("readingList.json", (err, data) => {
-        if (err) {
-            readingListError()
-        } else {
-            const content = JSON.parse(data);
-            content.push(book)
-            fs.writeFileSync('readingList.json', JSON.stringify(content))
-            setTimeout(() => {
-                mainMenu()
-            }, 1000)
-        }
-    });
+const addToReadingList = async (book) => {
+    const content = await getReadingList()
+    content.push(book)
+    fs.writeFileSync('readingList.json', JSON.stringify(content))
+    setTimeout(() => {
+        mainMenu()
+    }, 1000)
+
 }
 
 const readingListError = () => {
@@ -213,20 +230,22 @@ const getReadingList = async () => {
                 readingListError()
                 return;
             } else {
-                if (data.length === 0) {
-                    resetReadingList()
-                    showReadingList()
-                    return;
-                }
                 return data
             }
         })
-        return JSON.parse(content)
+        const data = JSON.parse(content)
+        
+        if(data instanceof Array){
+            return data
+        }else{
+            resetReadingList()
+            return []
+            
+        }
+        
     } catch(e) {
-        return "There has been an error"
-    }
-  
-    
+        readingListError()
+    } 
 }
 
 const showReadingList = async () => {
@@ -236,11 +255,7 @@ const showReadingList = async () => {
     
     console.log("READING LIST")
     console.log(line_lg)
-    let index = 1
-    content.forEach(book => {
-        printBookData(book, i, yellow)
-        index += 1
-    })
+    printBooks(content, yellow, white)
 
     setTimeout(() => {
         mainMenu()
@@ -248,12 +263,11 @@ const showReadingList = async () => {
 }
 
 const resetReadingList = () => {
-    fs.writeFileSync('readingList.json', JSON.stringify([]))
+    return fs.writeFileSync('readingList.json', JSON.stringify([]))
 }
 
-
-
 const start = async () => {
+    
     printThreeLgLines()
     console.log(cyan, "Welcome to myBooks, a simple app using Google books api!")
     printThreeLgLines()
@@ -268,7 +282,6 @@ const start = async () => {
     
 }
 
-// Start the app
-start()
+start();
 
-module.exports = { start, queryBooks, listQueryResults, selectBookFromQuery, showReadingList, isDefaultInput }
+module.exports = { getReadingList, addToReadingList, parseBookData, queryBooks, listQueryResults, selectBookFromQuery, showReadingList, isDefaultInput }

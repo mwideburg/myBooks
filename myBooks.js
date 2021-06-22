@@ -284,4 +284,4 @@ const start = async () => {
 
 start();
 
-module.exports = { getReadingList, addToReadingList, parseBookData, queryBooks, listQueryResults, selectBookFromQuery, showReadingList, isDefaultInput }
+module.exports = { resetReadingList, getReadingList, addToReadingList, parseBookData, queryBooks, listQueryResults, selectBookFromQuery, showReadingList, isDefaultInput }

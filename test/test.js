@@ -7,7 +7,8 @@ const { queryBooks,
     isDefaultInput,
     selectBookFromQuery,
     addToReadingList,
-    getReadingList
+    getReadingList,
+    resetReadingList
 } = require('../myBooks.js')
 
 describe("Menu isDefaultInput()", function(){
@@ -133,6 +134,15 @@ describe("Add To Reading List addToReadingList()", function () {
         expect(list[list.length - 1].publisher).to.be(data.publisher)
     })
     
+})
+
+describe("Reset List resetReadingList()", function(){
+    it("should reset the reading list to an empty array", async function(){
+        resetReadingList()
+        const list = await getReadingList()
+        expect(list).to.be.an('array')
+        expect(list.length).to.be(0)
+    })
 })
 
 
